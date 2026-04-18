@@ -28,6 +28,18 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+# Spring Boot config with secrets (never push this)
+application-prod.yml
+application-prod.properties
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
 
 ### VS Code ###
 .vscode/
