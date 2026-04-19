@@ -16,5 +16,6 @@ public class FieldMapping {
     private String targetField;
     private String dataType;
     private boolean required;
+    private String defaultValue;
     private boolean skip;
 }
