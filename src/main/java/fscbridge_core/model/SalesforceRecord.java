@@ -17,7 +17,12 @@ public class SalesforceRecord {
     private String id;
     private String objectType;
     private Map<String, Object> fields;
-    private String errorMessage;
-    private String tragetId;
-
+//    private String errorMessage;
+//    private String tragetId;
+    @Builder.Default
+    private Boolean migrated = false;
+    @Builder.Default
+    private String errorMessage = "";
+    @Builder.Default
+    private String targetId ="";
 }
