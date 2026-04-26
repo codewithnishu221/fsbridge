@@ -1,0 +1,182 @@
+package fsbridge_connector.client;
+
+import fsbridge_connector.auth.OAuthService;
+import fsbridge_connector.config.SalesforceProperties;
+import fscbridge_core.exception.FsBridgeException;
+import fscbridge_core.model.SalesforceRecord;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.*;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class SalesforceClient {
+
+    private final OAuthService oAuthService;
+    private final SalesforceProperties properties;
+    private final RestTemplate restTemplate;
+
+
+    @SuppressWarnings("unchecked")
+    public List<SalesforceRecord> queryRecords(String soqlQuery) {
+        log.info("Executing SOQL query: {}", soqlQuery);
+
+        try {
+             String queryUrl = oAuthService.getInstanceUrl()
+                    + "/services/data/"
+                    + properties.getApiVersion()
+                    + "/query?q="
+                    + soqlQuery.replace(" ", "+");
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    queryUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(buildHeaders()),
+                    Map.class
+            );
+
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody == null) {
+                log.warn("Empty response body from Salesforce query");
+                return Collections.emptyList();
+            }
+
+            List<Map<String, Object>> rawRecords =
+                    (List<Map<String, Object>>) responseBody.get("records");
+
+            int totalSize = (Integer) responseBody.getOrDefault("totalSize", 0);
+            log.info("Query returned {} records", totalSize);
+
+            // Convert each raw map into a SalesforceRecord object
+            List<SalesforceRecord> records = new ArrayList<>();
+            for (Map<String, Object> raw : rawRecords) {
+                SalesforceRecord record = SalesforceRecord.builder()
+                        .id((String) raw.get("Id"))
+                        .objectType((String) raw.getOrDefault("attributes",
+                                Map.of("type", "Unknown")))
+                        .fields(raw)
+                        .build();
+                records.add(record);
+            }
+
+            return records;
+
+        } catch (FsBridgeException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to query Salesforce records: {}", e.getMessage());
+            throw new FsBridgeException("QUERY_FAILED",
+                    "Failed to query records: " + e.getMessage(), e);
+        }
+    }
+
+
+    @SuppressWarnings("unchecked")
+    public String insertRecord(String objectType, Map<String, Object> fields) {
+        log.debug("Inserting record into object: {}", objectType);
+
+        try {
+
+            String insertUrl = oAuthService.getInstanceUrl()
+                    + "/services/data/"
+                    + properties.getApiVersion()
+                    + "/sobjects/"
+                    + objectType;
+
+            // Remove read-only fields that Salesforce rejects on insert
+            // Id, CreatedDate etc cannot be set manually
+            Map<String, Object> cleanFields = new HashMap<>(fields);
+            cleanFields.remove("Id");
+            cleanFields.remove("CreatedDate");
+            cleanFields.remove("LastModifiedDate");
+            cleanFields.remove("SystemModstamp");
+            cleanFields.remove("attributes");
+
+            // Make the POST request
+            HttpEntity<Map<String, Object>> request =
+                    new HttpEntity<>(cleanFields, buildHeaders());
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    insertUrl,
+                    request,
+                    Map.class
+            );
+
+            // Salesforce returns {"id": "NEW_RECORD_ID", "success": true}
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody == null || !(Boolean) responseBody.get("success")) {
+                throw new FsBridgeException("INSERT_FAILED",
+                        "Salesforce returned failure for insert into " + objectType);
+            }
+
+            String newId = (String) responseBody.get("id");
+            log.debug("Record inserted successfully. New ID: {}", newId);
+            return newId;
+
+        } catch (FsBridgeException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to insert record into {}: {}", objectType, e.getMessage());
+            throw new FsBridgeException("INSERT_FAILED",
+                    "Failed to insert record: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * DELETES a record from Salesforce by ID.
+     * Used by the rollback engine to undo a migration.
+     *
+     * @param objectType - Salesforce object API name
+     * @param recordId   - the ID of the record to delete
+     */
+    public void deleteRecord(String objectType, String recordId) {
+        log.info("Deleting record {} from {}", recordId, objectType);
+
+        try {
+            String deleteUrl = oAuthService.getInstanceUrl()
+                    + "/services/data/"
+                    + properties.getApiVersion()
+                    + "/sobjects/"
+                    + objectType
+                    + "/"
+                    + recordId;
+
+            restTemplate.exchange(
+                    deleteUrl,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(buildHeaders()),
+                    Void.class
+            );
+
+            log.info("Record {} deleted successfully", recordId);
+
+        } catch (Exception e) {
+            log.error("Failed to delete record {}: {}", recordId, e.getMessage());
+            throw new FsBridgeException("DELETE_FAILED",
+                    "Failed to delete record " + recordId + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * BUILDS HTTP HEADERS for every Salesforce API call.
+     *
+     * Every request needs:
+     * 1. Authorization: Bearer YOUR_TOKEN  ← proves who we are
+     * 2. Content-Type: application/json    ← we send/receive JSON
+     *
+     * This is a private helper method.
+     * Private = only used inside this class.
+     * Helper = just reduces code repetition.
+     */
+    private HttpHeaders buildHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + oAuthService.getAccessToken());
+        return headers;
+    }
+}

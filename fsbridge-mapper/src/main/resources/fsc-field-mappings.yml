@@ -1,0 +1,100 @@
+# FSC-Bridge Field Mapping Rules
+# These rules tell the mapper how to translate
+# old FSC managed package fields to new FSC Core fields.
+#
+# sourceField = old field name (with FinServ__ namespace)
+# targetField = new FSC Core field name (no namespace)
+# dataType    = the type of data in this field
+# required    = must this field have a value?
+# defaultValue= use this if source value is null
+# skip        = true means ignore this field completely
+
+mappings:
+
+  # ─── FinancialAccount Object ───────────────────────────────
+  - sourceField: "FinServ__FinancialAccount__c"
+    targetField: "FinancialAccount"
+    dataType: "STRING"
+    required: true
+    defaultValue: ""
+    skip: false
+
+  - sourceField: "FinServ__AnnualRevenue__c"
+    targetField: "AnnualRevenue"
+    dataType: "DECIMAL"
+    required: false
+    defaultValue: "0.0"
+    skip: false
+
+  - sourceField: "FinServ__Balance__c"
+    targetField: "Balance"
+    dataType: "DECIMAL"
+    required: false
+    defaultValue: "0.0"
+    skip: false
+
+  - sourceField: "FinServ__FinancialAccountType__c"
+    targetField: "FinancialAccountType"
+    dataType: "STRING"
+    required: false
+    defaultValue: "UNKNOWN"
+    skip: false
+
+  - sourceField: "FinServ__Status__c"
+    targetField: "Status"
+    dataType: "STRING"
+    required: false
+    defaultValue: "Active"
+    skip: false
+
+  # ─── Household Object ──────────────────────────────────────
+  - sourceField: "FinServ__Household__c"
+    targetField: "AccountGroup"
+    dataType: "STRING"
+    required: false
+    defaultValue: ""
+    skip: false
+
+  - sourceField: "FinServ__HouseholdName__c"
+    targetField: "Name"
+    dataType: "STRING"
+    required: true
+    defaultValue: "Unknown Household"
+    skip: false
+
+  # ─── Financial Goal Object ─────────────────────────────────
+  - sourceField: "FinServ__FinancialGoal__c"
+    targetField: "FinancialGoal"
+    dataType: "STRING"
+    required: false
+    defaultValue: ""
+    skip: false
+
+  - sourceField: "FinServ__TargetValue__c"
+    targetField: "TargetValue"
+    dataType: "DECIMAL"
+    required: false
+    defaultValue: "0.0"
+    skip: false
+
+  - sourceField: "FinServ__ActualValue__c"
+    targetField: "ActualValue"
+    dataType: "DECIMAL"
+    required: false
+    defaultValue: "0.0"
+    skip: false
+
+  # ─── Fields to SKIP (read-only, system managed) ────────────
+  - sourceField: "FinServ__CreatedDate__c"
+    targetField: ""
+    dataType: "DATE"
+    required: false
+    defaultValue: ""
+    skip: true
+
+  - sourceField: "FinServ__SystemModstamp__c"
+    targetField: ""
+    dataType: "DATE"
+    required: false
+    defaultValue: ""
+    skip: true
