@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.fsbridge</groupId>
-	<artifactId>fsbridge-mapper</artifactId>
+	<artifactId>fscbridge-connector</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>
@@ -50,15 +50,9 @@
 			<scope>test</scope>
 		</dependency>
         <dependency>
-            <groupId>com.fsbridge</groupId>
+            <groupId>com.fscbridge</groupId>
             <artifactId>fscbridge-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
-        </dependency>
-
-        <!-- Jackson YAML: for reading our fsc-field-mappings.yml file -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
 	</dependencies>
 

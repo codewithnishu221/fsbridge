@@ -10,17 +10,15 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.5.13</version>
-
-
         <relativePath/>
     </parent>
 
     <groupId>com.fscbridge</groupId>
-    <artifactId>fscbridge-core</artifactId>
+    <artifactId>fscbridge-audit</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>fscbridge-core</name>
-    <description>Shared domain models for FSC-Bridge</description>
+    <name>fscbridge-audit</name>
+    <description>Job audit logging and rollback engine</description>
 
     <properties>
         <java.version>17</java.version>
@@ -28,14 +26,34 @@
 
     <dependencies>
 
-        <!-- Lombok for @Data, @Builder etc -->
+        <!-- fscbridge-core: MigrationJob, SalesforceRecord models -->
+        <dependency>
+            <groupId>com.fscbridge</groupId>
+            <artifactId>fscbridge-core</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
+        <!-- JPA for saving AuditLog to database -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- H2 in-memory database for development -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Test dependency only -->
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -46,8 +64,8 @@
 
     <build>
         <plugins>
-            <!-- Just the compiler plugin, NO spring-boot-maven-plugin -->
-            <!-- Core is a library JAR, not a runnable Spring Boot app -->
+            <!-- NO spring-boot-maven-plugin here -->
+            <!-- audit is a library JAR, not a runnable Spring Boot app -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
