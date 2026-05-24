@@ -4,6 +4,7 @@ import fscbridge_audit.model.AuditLog;
 import fscbridge_audit.service.AuditService;
 import fscbridge_core.exception.FsBridgeException;
 import fscbridge_core.model.MigrationJob;
+import fscbridge_web.service.BatchMigrationService;
 import fscbridge_web.service.MigrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ public class MigrationController {
 
     private final MigrationService migrationService;
     private final AuditService auditService;
+    private final BatchMigrationService batchMigrationService;
 
 
     @PostMapping("/start")
@@ -123,5 +125,26 @@ public class MigrationController {
                 "service", "fscbridge-web",
                 "message", "FSC-Bridge migration API is running"
         ));
+    }
+
+    @PostMapping("/batch-start")
+    public ResponseEntity<?> startBatchMigration(@RequestBody MigrationJob job) {
+        log.info("Received batch migration request: {} → {}",
+                job.getSourceObject(), job.getTargetObject());
+
+        try {
+            MigrationJob completedJob =
+                    batchMigrationService.runBatchMigration(job);
+            return ResponseEntity.ok(completedJob);
+
+        } catch (Exception e) {
+            log.error("Batch migration failed: {}", e.getMessage());
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "BATCH_FAILED",
+                            "message", e.getMessage()
+                    ));
+        }
     }
 }

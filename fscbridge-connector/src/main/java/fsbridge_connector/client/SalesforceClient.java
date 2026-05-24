@@ -54,13 +54,22 @@ public class SalesforceClient {
 
             // Convert each raw map into a SalesforceRecord object
             List<SalesforceRecord> records = new ArrayList<>();
+
             for (Map<String, Object> raw : rawRecords) {
+
+                Map<String, Object> attributes =
+                        (Map<String, Object>) raw.get("attributes");
+
+                String objectType = attributes != null
+                        ? (String) attributes.get("type")
+                        : "Unknown";
+
                 SalesforceRecord record = SalesforceRecord.builder()
                         .id((String) raw.get("Id"))
-                        .objectType((String) raw.getOrDefault("attributes",
-                                Map.of("type", "Unknown")))
+                        .objectType(objectType)
                         .fields(raw)
                         .build();
+
                 records.add(record);
             }
 

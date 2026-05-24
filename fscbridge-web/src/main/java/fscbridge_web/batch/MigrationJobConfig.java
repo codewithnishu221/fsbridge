@@ -1,0 +1,79 @@
+package fscbridge_web.batch;
+
+import fscbridge_audit.service.AuditService;
+import fsbridge_connector.client.SalesforceClient;
+import fscbridge_core.model.SalesforceRecord;
+import fsbridge_mapper.service.FieldMapperService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
+
+
+@Slf4j
+@Configuration
+@RequiredArgsConstructor
+public class MigrationJobConfig {
+
+    private final JobRepository jobRepository;
+    private final PlatformTransactionManager transactionManager;
+    private final SalesforceClient salesforceClient;
+    private final FieldMapperService fieldMapperService;
+    private final AuditService auditService;
+
+
+    private static final int CHUNK_SIZE = 10;
+
+
+    private static final int MAX_RECORDS = 200;
+
+
+    public Job createMigrationJob(String sourceObject,
+                                  String targetObject,
+                                  String jobId,
+                                  boolean dryRun) {
+
+        log.info("Creating Spring Batch job for: {} → {} | dryRun: {}",
+                sourceObject, targetObject, dryRun);
+
+        Step migrationStep = createMigrationStep(
+                sourceObject, targetObject, jobId, dryRun);
+
+        return new JobBuilder("migrationJob-" + jobId, jobRepository)
+                .start(migrationStep)
+                .build();
+    }
+
+
+    private Step createMigrationStep(String sourceObject,
+                                     String targetObject,
+                                     String jobId,
+                                     boolean dryRun) {
+
+        SalesforceItemReader reader = new SalesforceItemReader(
+                salesforceClient, sourceObject, MAX_RECORDS);
+
+        MappingItemProcessor processor = new MappingItemProcessor(
+                fieldMapperService, targetObject);
+
+        SalesforceItemWriter writer = new SalesforceItemWriter(
+                salesforceClient, auditService, jobId, targetObject, dryRun);
+
+        return new StepBuilder("migrationStep-" + jobId, jobRepository)
+                .<SalesforceRecord, SalesforceRecord>chunk(
+                        CHUNK_SIZE, transactionManager)
+                .reader(reader)
+                .processor(processor)
+                .writer(writer)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(10)
+                .build();
+    }
+}
