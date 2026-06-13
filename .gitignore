@@ -1,7 +1,7 @@
 # Local Spring profile files
-**/application-local.yml
-**/application-local.yaml
-
+**/application-dev.yml
+**/application-prod.yml
+**/application.yml
 # IntelliJ
 .idea/
 
