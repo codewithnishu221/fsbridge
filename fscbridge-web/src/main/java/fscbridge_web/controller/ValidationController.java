@@ -1,5 +1,6 @@
 package fscbridge_web.controller;
 
+import fscbridge_web.metrics.MigrationMetrics;
 import fscbridge_web.validator.PreFlightValidator;
 import fscbridge_web.validator.ValidationReport;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import java.util.Map;
 public class ValidationController {
 
     private final PreFlightValidator preFlightValidator;
-
+    private final MigrationMetrics migrationMetrics;
 
     @PostMapping("/run")
     public ResponseEntity<ValidationReport> runValidation(
@@ -29,8 +30,13 @@ public class ValidationController {
         log.info("Running pre-flight validation: {} → {}",
                 sourceObject, targetObject);
 
+        long startTime = System.currentTimeMillis();
+
         ValidationReport report = preFlightValidator.validate(
                 sourceObject, targetObject);
+
+        long duration = System.currentTimeMillis() - startTime;
+        migrationMetrics.recordValidation(duration);
 
         return ResponseEntity.ok(report);
     }

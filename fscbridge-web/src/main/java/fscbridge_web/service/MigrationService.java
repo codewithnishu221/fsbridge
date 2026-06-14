@@ -7,6 +7,7 @@ import fscbridge_core.model.MigrationJob;
 import fscbridge_core.model.SalesforceRecord;
 import fsbridge_connector.client.SalesforceClient;
 import fsbridge_mapper.service.FieldMapperService;
+import fscbridge_web.metrics.MigrationMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,7 @@ public class MigrationService {
     private final SalesforceClient salesforceClient;
     private final FieldMapperService fieldMapperService;
     private final AuditService auditService;
-
+    private final MigrationMetrics migrationMetrics;
 
     public MigrationJob runMigration(MigrationJob job) {
 
@@ -33,6 +34,9 @@ public class MigrationService {
         }
         log.info("Starting migration job: {} | dryRun: {}",
                 job.getJobId(), job.isDryRun());
+
+        migrationMetrics.recordJobStarted(job.isDryRun());
+        long startTime = System.currentTimeMillis();
 
         job.setStatus(JobStatus.RUNNING);
         job.setStartedAt(LocalDateTime.now());
@@ -112,13 +116,17 @@ public class MigrationService {
 
             auditService.logJobCompleted(job);
 
-            log.info("Job {} completed. Success: {} | Failed: {}",
-                    job.getJobId(), successCount, failureCount);
+            long duration = System.currentTimeMillis() - startTime;
+            migrationMetrics.recordJobCompleted(duration, successCount, failureCount);
+
+            log.info("Job {} completed. Success: {} | Failed: {} | {}ms",
+                    job.getJobId(), successCount, failureCount, duration);
 
             return job;
 
         } catch (Exception e) {
             log.error("Job {} failed: {}", job.getJobId(), e.getMessage());
+            migrationMetrics.recordJobFailed();
             job.setStatus(JobStatus.FAILED);
             job.setFailureReason(e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
@@ -130,7 +138,7 @@ public class MigrationService {
     public int rollback(String jobId, String objectType) {
         log.info("Starting rollback for job: {}", jobId);
 
-
+        migrationMetrics.recordRollback();
         auditService.logRollbackStarted(jobId);
 
         List<String> targetIds = auditService.getTargetIdsForRollback(jobId);
