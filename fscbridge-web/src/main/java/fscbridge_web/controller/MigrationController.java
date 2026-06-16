@@ -147,4 +147,20 @@ public class MigrationController {
                     ));
         }
     }
+
+    @GetMapping("/security-check")
+    public ResponseEntity<Map<String, String>> securityCheck(
+            jakarta.servlet.http.HttpServletResponse response) {
+
+        return ResponseEntity.ok(Map.of(
+                "status", "Security headers applied",
+                "xContentTypeOptions",
+                response.getHeader("X-Content-Type-Options"),
+                "xFrameOptions",
+                response.getHeader("X-Frame-Options"),
+                "cacheControl",
+                response.getHeader("Cache-Control")
+        ));
+    }
+
 }
