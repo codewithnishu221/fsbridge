@@ -66,6 +66,7 @@
 
         <root level="INFO">
             <appender-ref ref="MASKED_CONSOLE"/>
+            <appender-ref ref="MASKED_FILE"/>
         </root>
 
     </springProfile>
